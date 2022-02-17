@@ -69,6 +69,11 @@ grid_test <- grid_comp(shp = shp,
                        plot.rich = TRUE)
 
 
+
+
+# obtaining long data format for coordinates ------------------------------
+
+
 coords_grid <- grid_test[, c(2, 3)]
 rich_spp <- rowSums(grid_test[, c(4:ncol(grid_test))])
 grid_comp_pa <- grid_test[, c(4:ncol(grid_test))][which(rich_spp > 0), ]
