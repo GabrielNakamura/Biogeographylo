@@ -69,11 +69,20 @@ grid_test <- grid_comp(shp = shp,
                        plot.rich = TRUE)
 
 
+<<<<<<< HEAD
+=======
+
+
+# obtaining long data format for coordinates ------------------------------
+
+
+>>>>>>> 6a0fd5bccfa27091bc62ce07adedd944f8ad8a1a
 coords_grid <- grid_test[, c(2, 3)]
 rich_spp <- rowSums(grid_test[, c(4:ncol(grid_test))])
 grid_comp_pa <- grid_test[, c(4:ncol(grid_test))][which(rich_spp > 0), ]
 rich_spp_pa <- rowSums(grid_comp_pa)
 coords_grid_pa <- coords_grid[which(rich_spp > 0), ]
+<<<<<<< HEAD
 names(which(grid_comp_pa[1, ] == 1))
 
 lapply(rich_spp_pa, function(x){
@@ -98,3 +107,18 @@ matrix(rep(coords_grid[names(rich_spp_pa[1]), ], rich_spp_pa[1]),
             ncol = 2, 
             byrow = T, dimnames = list(1:rich_spp_pa[1], c("x", "y"))
        )
+=======
+
+coords_rich_pa <- cbind(coords_grid_pa, rich_spp_pa)
+coords_long <- do.call(rbind, apply(coords_rich_pa, MARGIN = 1, function(x){
+  matrix(rep(x[1:2], times = x[3]),
+         nrow = x[3],
+         ncol = 2, 
+         dimnames = list(1:x[3], c("x", "y")),
+         byrow = T)
+}, simplify = FALSE))
+names_long <- unlist(apply(grid_comp_pa, MARGIN = 1, function(x) names(which(x == 1))))
+units_long <- unlist(lapply(rownames(grid_comp_pa), MARGIN = 1, function(x) names(x)))
+data_long <- data.frame(coords_long, names_long, ID = rep(rownames(grid_comp_pa), rich_spp_pa))
+
+>>>>>>> 6a0fd5bccfa27091bc62ce07adedd944f8ad8a1a
