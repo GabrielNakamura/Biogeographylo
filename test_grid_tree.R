@@ -1,3 +1,8 @@
+# loading dataset for test ------------------------------------------------
+
+shp <- rgdal::readOGR(here::here("data", "shapes_tiranideos.shp"))
+shape.america <- rgdal::readOGR(here::here("data", "shape_america2.shp"))
+grid.resol <- 2
 
 # modified version of grid filter function (Hidasi-Neto) ------------------
 
@@ -23,10 +28,6 @@ GridFilter <- function(shape,
 
 
 # build grid and composition function -------------------------------------
-
-shp <- rgdal::readOGR(here::here("data", "shapes_tiranideos.shp"))
-shape.america <- rgdal::readOGR(here::here("data", "shape_america2.shp"))
-grid.resol <- 4
 
 grid_comp <- function(shp, 
                       grid.resol, 
@@ -59,3 +60,41 @@ grid_comp <- function(shp,
   }
 }
 
+
+# testing with real data --------------------------------------------------
+
+grid_test <- grid_comp(shp = shp, 
+                       grid.resol = 2,
+                       prop = 0, 
+                       plot.rich = TRUE)
+
+
+coords_grid <- grid_test[, c(2, 3)]
+rich_spp <- rowSums(grid_test[, c(4:ncol(grid_test))])
+grid_comp_pa <- grid_test[, c(4:ncol(grid_test))][which(rich_spp > 0), ]
+rich_spp_pa <- rowSums(grid_comp_pa)
+coords_grid_pa <- coords_grid[which(rich_spp > 0), ]
+names(which(grid_comp_pa[1, ] == 1))
+
+lapply(rich_spp_pa, function(x){
+  apply(grid_comp_pa, 1, function(y){
+    names_spp <- names(which(y == 1))
+    coords_long <- matrix(rep(coords_grid[names(x), ], x), 
+                          nrow = x,
+                          ncol = 2, 
+                          byrow = T, dimnames = list(1:x, c("x", "y"))
+    )
+    matrix_long <- cbind(coords_long, names_spp)
+    return(matrix_long)
+  })
+})
+
+
+rownames(coords_grid_pa[1, ])
+rownames(coords_grid_pa)
+names(rich_spp_pa[1])
+matrix(rep(coords_grid[names(rich_spp_pa[1]), ], rich_spp_pa[1]), 
+            nrow = rich_spp_pa[1],
+            ncol = 2, 
+            byrow = T, dimnames = list(1:rich_spp_pa[1], c("x", "y"))
+       )
