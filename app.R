@@ -1,5 +1,10 @@
 
+
+# libraries ---------------------------------------------------------------
+
 library(shiny)
+library(leaflet)
+
 # modified version of grid filter function (Hidasi-Neto) ------------------
 
 GridFilter <- function(shape,
@@ -65,26 +70,50 @@ grid_comp <- function(shp,
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Biogeographylo - an application to analyse spatial patterns in evolutionary history"),
+    titlePanel("Biogeographylo - Application to analyze spatial patterns in Historical Biogeography"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
+            sliderInput("grid_size",
+                        "Size of grids:",
+                        min = 0.5,
+                        max = 10,
+                        value = 4),
+            fileInput(inputId = "shp_input", label = "Input shapefile"),
+            fileInput(inputId = "phylo_input", label = "Input phylogenetic tree"),
+            actionButton("shp_tirani", "Example shapefile"),
+            textInput(inputId = "grid_size", label = "Grid size cells in decimal degrees:"),
+            textInput(inputId = "prop_cell", label = "Proportion of the cells used in the grid"),
+            checkboxGroupInput(inputId = "metrics_calc", 
+                               label = "Which metrics should be calculated?", 
+                               choices = c("PD" = "PD_faith", 
+                                           "PE" = "PE_rosauer", 
+                                           "PD model-based" = "PD_model",
+                                           "PE model-based" = "PE_model"
+                                           ),
+                               selected = c("PD_faith",
+                                            "PE_rosauer", 
+                                            "PD_model", 
+                                            "PE_model"
+                                            ),
+                               width = "100%"
+            )
+   
+            ),
+        
+        # plot phylogeny and map
         mainPanel(
-           plotOutput("distPlot"), # here goes the phylogeny
-           plotOutput("gridmap") # here goes the grid map 
-                                    # both of them must be reactive objects
+            fluidRow(
+                leafletOutput(outputId = "map_shp", height = 500)
+            ),
+            fluidRow(
+                plotOutput(outputId = "phylo_out")
+            )
+        )
         )
     )
-)
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
