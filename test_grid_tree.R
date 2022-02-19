@@ -68,7 +68,7 @@ grid_test <- grid_comp(shp = shp,
                        prop = 0, 
                        plot.rich = TRUE)
 
-
+plot(grid_test)
 
 # obtaining long data format for coordinates ------------------------------
 coords_grid <- grid_test[, c(2, 3)]
@@ -77,28 +77,6 @@ grid_comp_pa <- grid_test[, c(4:ncol(grid_test))][which(rich_spp > 0), ]
 rich_spp_pa <- rowSums(grid_comp_pa)
 coords_grid_pa <- coords_grid[which(rich_spp > 0), ]
 
-lapply(rich_spp_pa, function(x){
-  apply(grid_comp_pa, 1, function(y){
-    names_spp <- names(which(y == 1))
-    coords_long <- matrix(rep(coords_grid[names(x), ], x), 
-                          nrow = x,
-                          ncol = 2, 
-                          byrow = T, dimnames = list(1:x, c("x", "y"))
-    )
-    matrix_long <- cbind(coords_long, names_spp)
-    return(matrix_long)
-  })
-})
-
-
-rownames(coords_grid_pa[1, ])
-rownames(coords_grid_pa)
-names(rich_spp_pa[1])
-matrix(rep(coords_grid[names(rich_spp_pa[1]), ], rich_spp_pa[1]), 
-            nrow = rich_spp_pa[1],
-            ncol = 2, 
-            byrow = T, dimnames = list(1:rich_spp_pa[1], c("x", "y"))
-       )
 
 coords_rich_pa <- cbind(coords_grid_pa, rich_spp_pa)
 coords_long <- do.call(rbind, apply(coords_rich_pa, MARGIN = 1, function(x){
@@ -109,6 +87,14 @@ coords_long <- do.call(rbind, apply(coords_rich_pa, MARGIN = 1, function(x){
          byrow = T)
 }, simplify = FALSE))
 names_long <- unlist(apply(grid_comp_pa, MARGIN = 1, function(x) names(which(x == 1))))
-units_long <- unlist(lapply(rownames(grid_comp_pa), MARGIN = 1, function(x) names(x)))
-data_long <- data.frame(coords_long, names_long, ID = rep(rownames(grid_comp_pa), rich_spp_pa))
+data_long <- data.frame(coords_long, names_long, ID = rep(rownames(grid_comp_pa), rich_spp_pa)) # long data format to coordinates
 
+# reading phylogenetic tree
+
+tree <- ape::read.tree(file = here::here("data", "Tree_TF400Howard_Pruned.tre"))
+
+tree$tip.label
+spp_names <- gsub(data_long$names_long, pattern = " ", replacement = "_")
+matrix_long <- as.matrix(data_long[, c(1, 2)])
+rownames(matrix_long) <- spp_names
+phylo_map <- phytools::phylo.to.map(tree = tree, coords = data_long)
