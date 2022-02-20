@@ -31,8 +31,9 @@ GridFilter <- function(shape,
 
 grid_comp <- function(shp, 
                       grid.resol, 
-                      prop, 
-                      plot.rich = TRUE){
+                      prop 
+                      )
+  {
   filter_grid <- GridFilter(shape = shape.america, resol = grid.resol, prop = 1)
   slot(filter_grid, "data") <- cbind("ID" = 1:length(filter_grid),
                                                slot(filter_grid, "data"))
@@ -51,13 +52,10 @@ grid_comp <- function(shp,
   xy <- terra::xyFromCell(rich, 1:raster::ncell(rich))
   colnames(xy) <- c("Longitude(x)", "Latitude(y)")
   pam <- cbind(ID = which(!is.na(raster::values(rich)) == TRUE), xy[which(!is.na(raster::values(rich)) == TRUE), ], pa.shp$PAM)
-  if(plot.rich == TRUE){
-    raster::plot(rich)
-    maps::map(add = TRUE)
-    return(pam)
-  } else{
-    pam
-  }
+  list_map <- vector(mode = "list", length = 2)
+  list_map$rich_map <- rich
+  list_map$long_composition <- pam
+  return(list_map)
 }
 
 
@@ -65,10 +63,10 @@ grid_comp <- function(shp,
 
 grid_test <- grid_comp(shp = shp, 
                        grid.resol = 2,
-                       prop = 0, 
-                       plot.rich = TRUE)
+                       prop = 0
+                       )
 
-plot(grid_test)
+
 
 # obtaining long data format for coordinates ------------------------------
 coords_grid <- grid_test[, c(2, 3)]
@@ -93,7 +91,6 @@ data_long <- data.frame(coords_long, names_long, ID = rep(rownames(grid_comp_pa)
 
 tree <- ape::read.tree(file = here::here("data", "Tree_TF400Howard_Pruned.tre"))
 
-tree$tip.label
 spp_names <- gsub(data_long$names_long, pattern = " ", replacement = "_")
 matrix_long <- as.matrix(data_long[, c(1, 2)])
 rownames(matrix_long) <- spp_names

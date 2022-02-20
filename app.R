@@ -4,6 +4,10 @@
 
 library(shiny)
 library(leaflet)
+library(maps)
+library(raster)
+library(sp)
+library(terra)
 
 # modified version of grid filter function (Hidasi-Neto) ------------------
 
@@ -29,10 +33,6 @@ GridFilter <- function(shape,
 
 
 # build grid and composition function -------------------------------------
-
-shp <- rgdal::readOGR(here::here("data", "shapes_tiranideos.shp"))
-shape.america <- rgdal::readOGR(here::here("data", "shape_america2.shp"))
-grid.resol <- 4
 
 grid_comp <- function(shp, 
                       grid.resol, 
@@ -75,13 +75,15 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("grid_size",
-                        "Size of grids:",
-                        min = 0.5,
-                        max = 10,
-                        value = 4),
-            fileInput(inputId = "shp_input", label = "Input shapefile"),
-            fileInput(inputId = "phylo_input", label = "Input phylogenetic tree"),
+            fileInput(inputId = "shp_input", 
+                      label = "Input shapefile of occurrences", 
+                      multiple = TRUE,
+                      accept = c('.shp','.dbf','.sbn','.sbx','.shx','.prj')
+                      ),
+            fileInput(inputId = "phylo_input",
+                      label = "Input phylogenetic tree",
+                      accept = c('.txt', '.new')
+                      ),
             actionButton("shp_tirani", "Example shapefile"),
             textInput(inputId = "grid_size", label = "Grid size cells in decimal degrees:"),
             textInput(inputId = "prop_cell", label = "Proportion of the cells used in the grid"),
@@ -117,15 +119,95 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    
+    # generate phylogenetic tree from example or input file 
+    output$phylo_out <- renderPlot({
+        ape::plot.phylo(input$phylo_input)
     })
+    
+    # generate map with click options
+    output$map_grid <- renderLeaflet()
+    
+    # input shapefile of occurrence records from user
+    map <- reactive({
+        req(input$shp_input)
+        
+        # shpdf is a data.frame with the name, size, type and
+        # datapath of the uploaded files
+        shpdf <- input$shp_input
+        
+        # The files are uploaded with names
+        # 0.dbf, 1.prj, 2.shp, 3.xml, 4.shx
+        # (path/names are in column datapath)
+        # We need to rename the files with the actual names:
+        # fe_2007_39_county.dbf, etc.
+        # (these are in column name)
+        
+        # Name of the temporary directory where files are uploaded
+        tempdirname <- dirname(shpdf$datapath[1])
+        
+        # Rename files
+        for (i in 1:nrow(shpdf)) {
+            file.rename(
+                shpdf$datapath[i],
+                paste0(tempdirname, "/", shpdf$name[i])
+            )
+        }
+        
+        # Now we read the shapefile with readOGR() of rgdal package
+        # passing the name of the file with .shp extension.
+        
+        # We use the function grep() to search the pattern "*.shp$"
+        # within each element of the character vector shpdf$name.
+        # grep(pattern="*.shp$", shpdf$name)
+        # ($ at the end denote files that finish with .shp,
+        # not only that contain .shp)
+        map <- readOGR(paste(tempdirname,
+                             shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
+                             sep = "/"
+        ))
+        map
+    })
+    
+    # input example shapefile of occurrence records from Tiranidae
+    map <- reactive({
+        req(input$shp_tirani)
+        map <- rgdal::readOGR(here::here("data", "shapes_tiranideos.shp")
+                              )
+        map
+    })
+    
+    
+    # filling the leaflet map with spatial information
+    output$map_shp <- renderLeaflet({
+        if (is.null(map())) {
+            return(NULL)
+        }
+        
+        map <- map()
+        
+        # Create leaflet
+        pal <- colorBin("YlOrRd", domain = map$variableplot, bins = 7)
+        labels <- sprintf("%s: %g", map$county, map$variableplot) %>%
+            lapply(htmltools::HTML)
+        
+        l <- leaflet(map) %>%
+            addTiles() %>%
+            addPolygons(
+                fillColor = ~ pal(variableplot),
+                color = "white",
+                dashArray = "3",
+                fillOpacity = 0.7,
+                label = labels
+            ) %>%
+            leaflet::addLegend(
+                pal = pal, values = ~variableplot,
+                opacity = 0.7, title = NULL
+            )
+    })
+    
+    
+
 }
 
 # Run the application 
