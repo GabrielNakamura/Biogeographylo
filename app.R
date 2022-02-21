@@ -107,10 +107,10 @@ ui <- fluidPage(
         # plot phylogeny and map
         mainPanel(
             fluidRow(
-                leafletOutput(outputId = "map_shp", height = 500)
+               plotOutput(outputId = "mapPlot", height = 500)
             ),
             fluidRow(
-                plotOutput(outputId = "phylo_out")
+              plotOutput(outputId = "phyloPlot")
             )
         )
         )
@@ -119,14 +119,6 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    
-    # generate phylogenetic tree from example or input file 
-    output$phylo_out <- renderPlot({
-        ape::plot.phylo(input$phylo_input)
-    })
-    
-    # generate map with click options
-    output$map_grid <- renderLeaflet()
     
     # input shapefile of occurrence records from user
     map <- reactive({
@@ -177,40 +169,31 @@ server <- function(input, output) {
         map
     })
     
-    
-    # filling the leaflet map with spatial information
-    output$map_shp <- renderLeaflet({
-        if (is.null(map())) {
-            return(NULL)
-        }
-        
-        map <- map()
-        
-        # Create leaflet
-        pal <- colorBin("YlOrRd", domain = map$variableplot, bins = 7)
-        labels <- sprintf("%s: %g", map$county, map$variableplot) %>%
-            lapply(htmltools::HTML)
-        
-        l <- leaflet(map) %>%
-            addTiles() %>%
-            addPolygons(
-                fillColor = ~ pal(variableplot),
-                color = "white",
-                dashArray = "3",
-                fillOpacity = 0.7,
-                label = labels
-            ) %>%
-            leaflet::addLegend(
-                pal = pal, values = ~variableplot,
-                opacity = 0.7, title = NULL
-            )
+    # user option to input phylogenetic tree
+    phylo_out <- reactive({
+      req(input$phylo_input)
+      phylo_out <- ape::read.tree(file = input$phylo_input$datapath)
+      phylo_out
     })
     
+    # example with tiranidae phylogenet tree
+    phylo_out <- reactive({
+      req(input$shp_tirani)
+      phylo_out <- ape::read.tree(file = here::here("data", "Tree_TF400Howard_Pruned.tre"))
+      phylo_out
+    })
     
+    # map output with shapefile
+    output$mapPlot <- renderPlot({
+      plot(map())
+    })
+    
+    # phylo output with phylogenetic tree
+    output$phyloPlot <- renderPlot({
+      plot(phylo_out())
+    })
 
 }
 
 # Run the application 
-
-
 shinyApp(ui = ui, server = server)
