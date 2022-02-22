@@ -109,7 +109,7 @@ ui <- fluidPage(
     # plot phylogeny and map
     mainPanel(
       fluidRow(
-        plotOutput(outputId = "mapPlot", height = 500)
+        leafletOutput(outputId = "mapPlot", height = 500)
       ),
       fluidRow(
         plotOutput(outputId = "phyloPlot")
@@ -169,7 +169,6 @@ server <- function(input, output) {
     req(input$shp_tirani)
     map <- rgdal::readOGR(here::here("data", "shape_america2.shp")
     )
-    map <- sf::st_as_sf(x = map)
     map
   })
   
@@ -188,11 +187,10 @@ server <- function(input, output) {
   })
   
   # map output with shapefile
-  output$mapPlot <- renderPlot({
-    
-    ggplot() +
-      geom_sf(data = map(), aes(geometry = geometry))
-    
+  output$mapPlot <- renderLeaflet({
+    map() %>% leaflet()  %>% addTiles() %>% 
+      addPolygons(data = map(), weight=5) %>% 
+      addGraticule(interval = input$grid_size)
   })
   
   # output$mapPlot <- renderPrint({
